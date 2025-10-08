@@ -2,7 +2,7 @@
 The little jumping bird game, but written with Bevy and Rust.
 
 ## About
-A Flappy Bird clone (called "Rlappy Bird") implemented in Rust using the Bevy game engine. Control a bird that must navigate through pipes without colliding with them or the ground.
+A Flappy Bird clone (called "Rlappy Bev") implemented in Rust using the Bevy game engine. Control a bird that must navigate through pipes without colliding with them or the ground.
 
 ## Features
 - Simple and addictive gameplay
