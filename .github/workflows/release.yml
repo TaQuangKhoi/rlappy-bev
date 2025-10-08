@@ -72,16 +72,33 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Prepare binary
+      - name: Prepare release package
         shell: bash
         run: |
+          # Create release directory
+          mkdir -p release-package
+          
+          # Copy binary
           cd target/${{ matrix.target }}/release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cp ${{ matrix.binary_name }} ${{ matrix.asset_name }}
+            cp ${{ matrix.binary_name }} ../../../release-package/
           else
-            cp ${{ matrix.binary_name }} ${{ matrix.asset_name }}
-            chmod +x ${{ matrix.asset_name }}
+            cp ${{ matrix.binary_name }} ../../../release-package/
+            chmod +x ../../../release-package/${{ matrix.binary_name }}
           fi
+          cd ../../..
+          
+          # Copy assets directory
+          cp -r assets release-package/
+          
+          # Create ZIP archive
+          cd release-package
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a ../rlappy-bev-${{ matrix.target }}.zip *
+          else
+            zip -r ../rlappy-bev-${{ matrix.target }}.zip *
+          fi
+          cd ..
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -89,6 +106,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./target/${{ matrix.target }}/release/${{ matrix.asset_name }}
-          asset_name: ${{ matrix.asset_name }}
-          asset_content_type: application/octet-stream
+          asset_path: ./rlappy-bev-${{ matrix.target }}.zip
+          asset_name: rlappy-bev-${{ matrix.target }}.zip
+          asset_content_type: application/zip

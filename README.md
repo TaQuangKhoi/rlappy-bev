@@ -56,11 +56,22 @@ git push origin v0.1.1
 
 The release workflow will automatically:
 - Build binaries for Windows (.exe), Linux, and macOS
+- Package each binary with the required assets (images) into a ZIP file
 - Create a GitHub release with the version tag
-- Upload all binaries to the release
+- Upload all platform-specific ZIP packages to the release
 
 ### Downloading Releases
-Pre-built binaries are available on the [Releases](https://github.com/TaQuangKhoi/rlappy-bev/releases) page.
+Pre-built packages are available on the [Releases](https://github.com/TaQuangKhoi/rlappy-bev/releases) page.
+
+Each release includes ZIP files for different platforms:
+- `rlappy-bev-x86_64-pc-windows-msvc.zip` - Windows 64-bit
+- `rlappy-bev-x86_64-unknown-linux-gnu.zip` - Linux 64-bit
+- `rlappy-bev-x86_64-apple-darwin.zip` - macOS 64-bit
+
+To run the game:
+1. Download the ZIP file for your platform
+2. Extract the ZIP file
+3. Run the executable (the assets folder must be in the same directory as the executable)
 
 ## License
 Licensed under the Apache License, Version 2.0. See LICENSE file for details.
