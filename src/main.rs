@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::state::app::AppExtStates;
 use bevy::state::condition::in_state;
 use rand::Rng;
+use std::time::Duration;
 
 const GRAVITY: f32 = -500.0;
 const BIRD_JUMP: f32 = 300.0;
@@ -13,6 +14,29 @@ const GROUND_HEIGHT: f32 = -250.0;
 #[derive(Component)]
 struct Bird {
     velocity: f32,
+}
+
+#[derive(Component)]
+struct AnimationConfig {
+    first_sprite_index: usize,
+    last_sprite_index: usize,
+    fps: u8,
+    frame_timer: Timer,
+}
+
+impl AnimationConfig {
+    fn new(first: usize, last: usize, fps: u8) -> Self {
+        Self {
+            first_sprite_index: first,
+            last_sprite_index: last,
+            fps,
+            frame_timer: Self::timer_from_fps(fps),
+        }
+    }
+
+    fn timer_from_fps(fps: u8) -> Timer {
+        Timer::new(Duration::from_secs_f32(1.0 / (fps as f32)), TimerMode::Once)
+    }
 }
 
 #[derive(Component)]
@@ -39,14 +63,18 @@ enum GameState {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Rlappy Bird".to_string(),
-                resolution: (800.0, 600.0).into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(ImagePlugin::default_nearest()) // prevents blurry sprites
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Rlappy Bird".to_string(),
+                        resolution: (800.0, 600.0).into(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .init_state::<GameState>()
         .insert_resource(Score(0))
         .insert_resource(PipeSpawnTimer(Timer::from_seconds(
@@ -64,6 +92,7 @@ fn main() {
                 spawn_pipes,
                 check_collisions,
                 update_score,
+                execute_animations,
             )
                 .run_if(in_state(GameState::Playing)),
         )
@@ -99,6 +128,8 @@ fn menu_system(
     mut next_state: ResMut<NextState<GameState>>,
     mut commands: Commands,
     query: Query<Entity, With<Text>>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
         // Clear menu text
@@ -106,18 +137,31 @@ fn menu_system(
             commands.entity(entity).despawn();
         }
 
-        // Spawn bird
+        // Load the bird sprite sheet
+        let texture = asset_server.load("bird.png");
+
+        // The sprite sheet has 4 sprites in a 2x2 grid
+        // Each sprite is 512x512 (since the image is 1024x1024)
+        let layout = TextureAtlasLayout::from_grid(UVec2::splat(512), 2, 2, None, None);
+        let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
+        // Create animation config - animate through all 4 frames at 8 FPS
+        let animation_config = AnimationConfig::new(0, 3, 8);
+
+        // Spawn bird with animated sprite
         commands.spawn((
             SpriteBundle {
-                sprite: Sprite {
-                    color: Color::srgb(1.0, 0.8, 0.0),
-                    custom_size: Some(Vec2::new(30.0, 30.0)),
-                    ..default()
-                },
-                transform: Transform::from_xyz(-100.0, 0.0, 0.0),
+                texture: texture.clone(),
+                transform: Transform::from_scale(Vec3::splat(0.06))
+                    .with_translation(Vec3::new(-100.0, 0.0, 0.0)),
                 ..default()
             },
+            TextureAtlas {
+                layout: texture_atlas_layout.clone(),
+                index: animation_config.first_sprite_index,
+            },
             Bird { velocity: 0.0 },
+            animation_config,
         ));
 
         // Spawn score text
@@ -163,6 +207,32 @@ fn bird_movement(time: Res<Time>, mut query: Query<(&mut Transform, &mut Bird)>)
     for (mut transform, mut bird) in query.iter_mut() {
         bird.velocity += GRAVITY * time.delta_seconds();
         transform.translation.y += bird.velocity * time.delta_seconds();
+    }
+}
+
+// This system loops through all the sprites in the TextureAtlas
+fn execute_animations(
+    time: Res<Time>,
+    mut query: Query<(&mut AnimationConfig, &mut TextureAtlas)>,
+) {
+    for (mut config, mut atlas) in &mut query {
+        // We track how long the current sprite has been displayed for
+        config.frame_timer.tick(time.delta());
+
+        // If it has been displayed for the user-defined amount of time (fps)...
+        if config.frame_timer.just_finished() {
+            if atlas.index == config.last_sprite_index {
+                // ...and it IS the last frame, then we move back to the first frame and continue
+                atlas.index = config.first_sprite_index;
+                // Reset the timer to continue the loop
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+            } else {
+                // ...and it is NOT the last frame, then we move to the next frame...
+                atlas.index += 1;
+                // ...and reset the frame timer to start counting all over again
+                config.frame_timer = AnimationConfig::timer_from_fps(config.fps);
+            }
+        }
     }
 }
 
