@@ -8,6 +8,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write  # Required to create tags
+
 jobs:
   create-tag:
     runs-on: ubuntu-latest
