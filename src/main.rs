@@ -139,12 +139,12 @@ fn menu_system(
 
         // Load the bird sprite sheet
         let texture = asset_server.load("bird.png");
-        
+
         // The sprite sheet has 4 sprites in a 2x2 grid
         // Each sprite is 512x512 (since the image is 1024x1024)
         let layout = TextureAtlasLayout::from_grid(UVec2::splat(512), 2, 2, None, None);
         let texture_atlas_layout = texture_atlas_layouts.add(layout);
-        
+
         // Create animation config - animate through all 4 frames at 8 FPS
         let animation_config = AnimationConfig::new(0, 3, 8);
 
@@ -152,7 +152,8 @@ fn menu_system(
         commands.spawn((
             SpriteBundle {
                 texture: texture.clone(),
-                transform: Transform::from_scale(Vec3::splat(0.06)).with_translation(Vec3::new(-100.0, 0.0, 0.0)),
+                transform: Transform::from_scale(Vec3::splat(0.06))
+                    .with_translation(Vec3::new(-100.0, 0.0, 0.0)),
                 ..default()
             },
             TextureAtlas {
