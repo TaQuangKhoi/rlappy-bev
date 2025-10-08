@@ -37,8 +37,26 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "doquyen-actions[bot]"
+          git config user.email "quyendo.07122006@gmail.com"
+
+      - name: Update Cargo.toml version
+        run: |
+          # Extract version without 'v' prefix (e.g., v0.1.1 -> 0.1.1)
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION_NUMBER="${VERSION#v}"
+          
+          # Update version in Cargo.toml
+          sed -i "s/^version = \".*\"/version = \"$VERSION_NUMBER\"/" Cargo.toml
+          
+          # Show the change
+          git diff Cargo.toml
+
+      - name: Commit version bump
+        run: |
+          git add Cargo.toml
+          git commit -m "Bump version to ${{ github.event.inputs.version }}"
+          git push origin main
 
       - name: Create and push tag
         run: |
