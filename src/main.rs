@@ -67,7 +67,10 @@ fn main() {
             )
                 .run_if(in_state(GameState::Playing)),
         )
-        .add_systems(Update, game_over_system.run_if(in_state(GameState::GameOver)))
+        .add_systems(
+            Update,
+            game_over_system.run_if(in_state(GameState::GameOver)),
+        )
         .run();
 }
 
@@ -75,22 +78,20 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
     // Spawn UI text
-    commands.spawn((
-        TextBundle::from_section(
-            "Press SPACE to Start",
-            TextStyle {
-                font_size: 40.0,
-                color: Color::WHITE,
-                ..default()
-            },
-        )
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(50.0),
-            left: Val::Px(250.0),
+    commands.spawn((TextBundle::from_section(
+        "Press SPACE to Start",
+        TextStyle {
+            font_size: 40.0,
+            color: Color::WHITE,
             ..default()
-        }),
-    ));
+        },
+    )
+    .with_style(Style {
+        position_type: PositionType::Absolute,
+        top: Val::Px(50.0),
+        left: Val::Px(250.0),
+        ..default()
+    }),));
 }
 
 fn menu_system(
@@ -120,22 +121,20 @@ fn menu_system(
         ));
 
         // Spawn score text
-        commands.spawn((
-            TextBundle::from_section(
-                "Score: 0",
-                TextStyle {
-                    font_size: 30.0,
-                    color: Color::WHITE,
-                    ..default()
-                },
-            )
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                top: Val::Px(10.0),
-                left: Val::Px(10.0),
+        commands.spawn((TextBundle::from_section(
+            "Score: 0",
+            TextStyle {
+                font_size: 30.0,
+                color: Color::WHITE,
                 ..default()
-            }),
-        ));
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            left: Val::Px(10.0),
+            ..default()
+        }),));
 
         // Spawn ground
         commands.spawn(SpriteBundle {
@@ -167,11 +166,7 @@ fn bird_movement(time: Res<Time>, mut query: Query<(&mut Transform, &mut Bird)>)
     }
 }
 
-fn spawn_pipes(
-    time: Res<Time>,
-    mut timer: ResMut<PipeSpawnTimer>,
-    mut commands: Commands,
-) {
+fn spawn_pipes(time: Res<Time>, mut timer: ResMut<PipeSpawnTimer>, mut commands: Commands) {
     if timer.0.tick(time.delta()).just_finished() {
         let mut rng = rand::thread_rng();
         let gap_y = rng.gen_range(-150.0..150.0);
@@ -247,9 +242,7 @@ fn check_collisions(
             let pipe_pos = pipe_transform.translation;
 
             // Simple AABB collision
-            if (bird_pos.x - pipe_pos.x).abs() < 45.0
-                && (bird_pos.y - pipe_pos.y).abs() < 215.0
-            {
+            if (bird_pos.x - pipe_pos.x).abs() < 45.0 && (bird_pos.y - pipe_pos.y).abs() < 215.0 {
                 next_state.set(GameState::GameOver);
                 return;
             }
@@ -288,22 +281,20 @@ fn game_over_system(
 ) {
     // Spawn game over text on first frame
     if text_count_query.iter().count() == 1 {
-        commands.spawn((
-            TextBundle::from_section(
-                format!("Game Over! Score: {}\nPress R to Restart", score.0 / 2),
-                TextStyle {
-                    font_size: 40.0,
-                    color: Color::WHITE,
-                    ..default()
-                },
-            )
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                top: Val::Px(200.0),
-                left: Val::Px(200.0),
+        commands.spawn((TextBundle::from_section(
+            format!("Game Over! Score: {}\nPress R to Restart", score.0 / 2),
+            TextStyle {
+                font_size: 40.0,
+                color: Color::WHITE,
                 ..default()
-            }),
-        ));
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(200.0),
+            left: Val::Px(200.0),
+            ..default()
+        }),));
     }
 
     if keyboard.just_pressed(KeyCode::KeyR) {
@@ -317,23 +308,21 @@ fn game_over_system(
 
         // Go back to menu
         next_state.set(GameState::Menu);
-        
+
         // Setup menu again
-        commands.spawn((
-            TextBundle::from_section(
-                "Press SPACE to Start",
-                TextStyle {
-                    font_size: 40.0,
-                    color: Color::WHITE,
-                    ..default()
-                },
-            )
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                top: Val::Px(50.0),
-                left: Val::Px(250.0),
+        commands.spawn((TextBundle::from_section(
+            "Press SPACE to Start",
+            TextStyle {
+                font_size: 40.0,
+                color: Color::WHITE,
                 ..default()
-            }),
-        ));
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(50.0),
+            left: Val::Px(250.0),
+            ..default()
+        }),));
     }
 }
