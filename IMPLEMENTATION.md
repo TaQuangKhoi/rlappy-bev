@@ -23,6 +23,7 @@ The game is built using Bevy's Entity Component System (ECS) architecture with t
    - `Bird`: The player-controlled character with velocity
    - `Pipe`: Obstacle entities
    - `Velocity`: Component for moving entities
+   - `StartButton`: UI button component for menu and game over screens
 
 2. **Resources**
    - `Score`: Tracks player's score
@@ -37,18 +38,19 @@ The game is built using Bevy's Entity Component System (ECS) architecture with t
 
 ### Core Systems
 
-1. **setup**: Initializes the game camera and UI
-2. **menu_system**: Handles menu state and game start
-3. **bird_input**: Processes space bar input for jumping
-4. **bird_movement**: Applies gravity and updates bird position
-5. **spawn_pipes**: Generates pipe obstacles at intervals
-6. **pipe_movement**: Scrolls pipes across the screen with progressive speed
-7. **check_collisions**: Detects bird-pipe and bird-ground collisions
-8. **update_score**: Tracks pipes passed by the bird and increases difficulty
-9. **pause_input**: Pauses the game when P is pressed
-10. **unpause_system**: Resumes the game from pause
-11. **screenshot_input**: Captures a screenshot of the game
-12. **game_over_system**: Handles game restart
+1. **setup**: Initializes the game camera and clickable UI button
+2. **button_system**: Handles button interactions (hover, click) for starting and restarting the game
+3. **menu_system**: Handles menu state and game start via keyboard
+4. **bird_input**: Processes space bar input for jumping
+5. **bird_movement**: Applies gravity and updates bird position
+6. **spawn_pipes**: Generates pipe obstacles at intervals
+7. **pipe_movement**: Scrolls pipes across the screen with progressive speed
+8. **check_collisions**: Detects bird-pipe and bird-ground collisions
+9. **update_score**: Tracks pipes passed by the bird and increases difficulty
+10. **pause_input**: Pauses the game when P is pressed
+11. **unpause_system**: Resumes the game from pause
+12. **screenshot_input**: Captures a screenshot of the game
+13. **game_over_system**: Handles game restart via keyboard and displays UI button
 
 ### Game Physics
 - **Gravity**: -500.0 units/second²
@@ -59,10 +61,11 @@ The game is built using Bevy's Entity Component System (ECS) architecture with t
 - **Speed Increase**: 5% speed increase per pipe passed (up to 2.5x max speed)
 
 ### Visual Elements
-- Bird: Yellow square (30x30 pixels)
+- Bird: Animated sprite from bird.png (scaled to ~30x30 pixels)
 - Pipes: Green rectangles (60x400 pixels)
 - Ground: Green rectangle (1000x50 pixels)
 - Score display: White text in top-left corner
+- **UI Buttons**: Green clickable buttons with hover effects for START and RESTART
 
 ## Technical Details
 
@@ -103,10 +106,11 @@ cargo build --release
 ```
 
 ## Game Controls
-- **SPACE**: Jump (in-game) or Start game (in menu)
+- **Click START button** or **SPACE**: Start game (in menu)
+- **SPACE**: Jump (in-game)
 - **P**: Pause/Resume game
 - **S**: Take a screenshot (saved to current directory)
-- **R**: Restart game (after game over)
+- **Click RESTART button** or **R**: Restart game (after game over)
 
 ## Future Enhancements
 Potential improvements could include:
