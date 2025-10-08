@@ -6,13 +6,18 @@ A Flappy Bird clone (called "Rlappy Bird") implemented in Rust using the Bevy ga
 
 ## Features
 - Simple and addictive gameplay
-- Score tracking
+- Score tracking with progressive difficulty
 - Randomly generated pipe obstacles
 - Gravity and jump physics
-- Game states: Menu, Playing, and Game Over
+- Pause/Resume functionality
+- Screenshot capture for sharing
+- Progressive speed increase as you score
+- Game states: Menu, Playing, Paused, and Game Over
 
 ## Controls
 - **SPACE**: Jump (in-game) / Start game (in menu)
+- **P**: Pause/Resume game
+- **S**: Take a screenshot (saved as `screenshot-YYYYMMDD-HHMMSS.png`)
 - **R**: Restart game (after game over)
 
 ## How to Run
