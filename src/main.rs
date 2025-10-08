@@ -47,6 +47,9 @@ impl AnimationConfig {
 struct Pipe;
 
 #[derive(Component)]
+struct StartButton;
+
+#[derive(Component)]
 struct Velocity {
     x: f32,
 }
@@ -103,7 +106,7 @@ fn main() {
             TimerMode::Repeating,
         )))
         .add_systems(Startup, setup)
-        .add_systems(Update, menu_system.run_if(in_state(GameState::Menu)))
+        .add_systems(Update, (menu_system, button_system).run_if(in_state(GameState::Menu)))
         .add_systems(
             Update,
             (
@@ -126,7 +129,7 @@ fn main() {
         )
         .add_systems(
             Update,
-            game_over_system.run_if(in_state(GameState::GameOver)),
+            (game_over_system, button_system).run_if(in_state(GameState::GameOver)),
         )
         .run();
 }
@@ -134,93 +137,199 @@ fn main() {
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
-    // Spawn UI text
-    commands.spawn((TextBundle::from_section(
-        "Press SPACE to Start",
-        TextStyle {
-            font_size: 40.0,
-            color: Color::WHITE,
-            ..default()
-        },
-    )
-    .with_style(Style {
-        position_type: PositionType::Absolute,
-        top: Val::Px(50.0),
-        left: Val::Px(250.0),
-        ..default()
-    }),));
+    // Spawn start button
+    commands
+        .spawn((
+            ButtonBundle {
+                style: Style {
+                    width: Val::Px(200.0),
+                    height: Val::Px(65.0),
+                    margin: UiRect::all(Val::Auto),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                background_color: Color::srgb(0.2, 0.7, 0.2).into(),
+                ..default()
+            },
+            StartButton,
+        ))
+        .with_children(|parent| {
+            parent.spawn(TextBundle::from_section(
+                "START",
+                TextStyle {
+                    font_size: 40.0,
+                    color: Color::WHITE,
+                    ..default()
+                },
+            ));
+        });
+}
+
+fn button_system(
+    mut interaction_query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<StartButton>),
+    >,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    button_query: Query<Entity, With<StartButton>>,
+    entities_query: Query<Entity, Or<(With<Bird>, With<Pipe>, With<Text>, With<Sprite>)>>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    current_state: Res<State<GameState>>,
+    mut score: ResMut<Score>,
+    mut difficulty: ResMut<GameDifficulty>,
+) {
+    for (interaction, mut color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *color = Color::srgb(0.1, 0.5, 0.1).into();
+                
+                // Handle based on current state
+                match current_state.get() {
+                    GameState::Menu => {
+                        // Clear button
+                        for entity in button_query.iter() {
+                            commands.entity(entity).despawn_recursive();
+                        }
+                        
+                        // Start the game
+                        start_game(&mut commands, &asset_server, &mut texture_atlas_layouts, &mut next_state);
+                    }
+                    GameState::GameOver => {
+                        // Clean up all entities
+                        for entity in entities_query.iter() {
+                            commands.entity(entity).despawn();
+                        }
+
+                        // Reset score and difficulty
+                        score.0 = 0;
+                        *difficulty = GameDifficulty::default();
+
+                        // Go back to menu
+                        next_state.set(GameState::Menu);
+
+                        // Spawn start button
+                        commands
+                            .spawn((
+                                ButtonBundle {
+                                    style: Style {
+                                        width: Val::Px(200.0),
+                                        height: Val::Px(65.0),
+                                        margin: UiRect::all(Val::Auto),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                    background_color: Color::srgb(0.2, 0.7, 0.2).into(),
+                                    ..default()
+                                },
+                                StartButton,
+                            ))
+                            .with_children(|parent| {
+                                parent.spawn(TextBundle::from_section(
+                                    "START",
+                                    TextStyle {
+                                        font_size: 40.0,
+                                        color: Color::WHITE,
+                                        ..default()
+                                    },
+                                ));
+                            });
+                    }
+                    _ => {}
+                }
+            }
+            Interaction::Hovered => {
+                *color = Color::srgb(0.25, 0.85, 0.25).into();
+            }
+            Interaction::None => {
+                *color = Color::srgb(0.2, 0.7, 0.2).into();
+            }
+        }
+    }
 }
 
 fn menu_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut next_state: ResMut<NextState<GameState>>,
     mut commands: Commands,
-    query: Query<Entity, With<Text>>,
+    button_query: Query<Entity, With<StartButton>>,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     if keyboard.just_pressed(KeyCode::Space) {
-        // Clear menu text
-        for entity in query.iter() {
-            commands.entity(entity).despawn();
+        // Clear button
+        for entity in button_query.iter() {
+            commands.entity(entity).despawn_recursive();
         }
 
-        // Load the bird sprite sheet
-        let texture = asset_server.load("bird.png");
-
-        // The sprite sheet has 4 sprites in a 2x2 grid
-        // Each sprite is 512x512 (since the image is 1024x1024)
-        let layout = TextureAtlasLayout::from_grid(UVec2::splat(512), 2, 2, None, None);
-        let texture_atlas_layout = texture_atlas_layouts.add(layout);
-
-        // Create animation config - animate through all 4 frames at 8 FPS
-        let animation_config = AnimationConfig::new(0, 3, 8);
-
-        // Spawn bird with animated sprite
-        commands.spawn((
-            SpriteBundle {
-                texture: texture.clone(),
-                transform: Transform::from_scale(Vec3::splat(0.06))
-                    .with_translation(Vec3::new(-100.0, 0.0, 0.0)),
-                ..default()
-            },
-            TextureAtlas {
-                layout: texture_atlas_layout.clone(),
-                index: animation_config.first_sprite_index,
-            },
-            Bird { velocity: 0.0 },
-            animation_config,
-        ));
-
-        // Spawn score text
-        commands.spawn((TextBundle::from_section(
-            "Score: 0",
-            TextStyle {
-                font_size: 30.0,
-                color: Color::WHITE,
-                ..default()
-            },
-        )
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(10.0),
-            left: Val::Px(10.0),
-            ..default()
-        }),));
-
-        // Spawn ground
-        commands.spawn(SpriteBundle {
-            sprite: Sprite {
-                color: Color::srgb(0.3, 0.8, 0.3),
-                custom_size: Some(Vec2::new(1000.0, 50.0)),
-                ..default()
-            },
-            transform: Transform::from_xyz(0.0, GROUND_HEIGHT, 0.0),
-            ..default()
-        });
-
-        next_state.set(GameState::Playing);
+        start_game(&mut commands, &asset_server, &mut texture_atlas_layouts, &mut next_state);
     }
+}
+
+fn start_game(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>,
+    next_state: &mut ResMut<NextState<GameState>>,
+) {
+    // Load the bird sprite sheet
+    let texture = asset_server.load("bird.png");
+
+    // The sprite sheet has 4 sprites in a 2x2 grid
+    // Each sprite is 512x512 (since the image is 1024x1024)
+    let layout = TextureAtlasLayout::from_grid(UVec2::splat(512), 2, 2, None, None);
+    let texture_atlas_layout = texture_atlas_layouts.add(layout);
+
+    // Create animation config - animate through all 4 frames at 8 FPS
+    let animation_config = AnimationConfig::new(0, 3, 8);
+
+    // Spawn bird with animated sprite
+    commands.spawn((
+        SpriteBundle {
+            texture: texture.clone(),
+            transform: Transform::from_scale(Vec3::splat(0.06))
+                .with_translation(Vec3::new(-100.0, 0.0, 0.0)),
+            ..default()
+        },
+        TextureAtlas {
+            layout: texture_atlas_layout.clone(),
+            index: animation_config.first_sprite_index,
+        },
+        Bird { velocity: 0.0 },
+        animation_config,
+    ));
+
+    // Spawn score text
+    commands.spawn((TextBundle::from_section(
+        "Score: 0",
+        TextStyle {
+            font_size: 30.0,
+            color: Color::WHITE,
+            ..default()
+        },
+    )
+    .with_style(Style {
+        position_type: PositionType::Absolute,
+        top: Val::Px(10.0),
+        left: Val::Px(10.0),
+        ..default()
+    }),));
+
+    // Spawn ground
+    commands.spawn(SpriteBundle {
+        sprite: Sprite {
+            color: Color::srgb(0.3, 0.8, 0.3),
+            custom_size: Some(Vec2::new(1000.0, 50.0)),
+            ..default()
+        },
+        transform: Transform::from_xyz(0.0, GROUND_HEIGHT, 0.0),
+        ..default()
+    });
+
+    next_state.set(GameState::Playing);
 }
 
 fn bird_input(keyboard: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Bird>) {
@@ -385,25 +494,59 @@ fn game_over_system(
     mut commands: Commands,
     entities_query: Query<Entity, Or<(With<Bird>, With<Pipe>, With<Text>, With<Sprite>)>>,
     text_count_query: Query<&Text>,
+    button_query: Query<&StartButton>,
     mut score: ResMut<Score>,
     mut difficulty: ResMut<GameDifficulty>,
 ) {
-    // Spawn game over text on first frame
-    if text_count_query.iter().count() == 1 {
-        commands.spawn((TextBundle::from_section(
-            format!("Game Over! Score: {}\nPress R to Restart", score.0 / 2),
-            TextStyle {
-                font_size: 40.0,
-                color: Color::WHITE,
+    // Spawn game over text and button on first frame
+    if text_count_query.iter().count() == 1 && button_query.iter().count() == 0 {
+        // Spawn game over text
+        commands.spawn((
+            TextBundle::from_section(
+                format!("Game Over! Score: {}", score.0 / 2),
+                TextStyle {
+                    font_size: 40.0,
+                    color: Color::WHITE,
+                    ..default()
+                },
+            )
+            .with_style(Style {
+                position_type: PositionType::Absolute,
+                top: Val::Px(150.0),
+                left: Val::Px(250.0),
                 ..default()
-            },
-        )
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(200.0),
-            left: Val::Px(200.0),
-            ..default()
-        }),));
+            }),
+        ));
+
+        // Spawn restart button
+        commands
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(250.0),
+                        left: Val::Px(300.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    background_color: Color::srgb(0.2, 0.7, 0.2).into(),
+                    ..default()
+                },
+                StartButton,
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "RESTART",
+                    TextStyle {
+                        font_size: 40.0,
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                ));
+            });
     }
 
     if keyboard.just_pressed(KeyCode::KeyR) {
@@ -419,21 +562,33 @@ fn game_over_system(
         // Go back to menu
         next_state.set(GameState::Menu);
 
-        // Setup menu again
-        commands.spawn((TextBundle::from_section(
-            "Press SPACE to Start",
-            TextStyle {
-                font_size: 40.0,
-                color: Color::WHITE,
-                ..default()
-            },
-        )
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(50.0),
-            left: Val::Px(250.0),
-            ..default()
-        }),));
+        // Spawn start button
+        commands
+            .spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(200.0),
+                        height: Val::Px(65.0),
+                        margin: UiRect::all(Val::Auto),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    background_color: Color::srgb(0.2, 0.7, 0.2).into(),
+                    ..default()
+                },
+                StartButton,
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle::from_section(
+                    "START",
+                    TextStyle {
+                        font_size: 40.0,
+                        color: Color::WHITE,
+                        ..default()
+                    },
+                ));
+            });
     }
 }
 
