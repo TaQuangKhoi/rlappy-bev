@@ -1,6 +1,8 @@
 use bevy::prelude::*;
+use bevy::render::view::screenshot::ScreenshotManager;
 use bevy::state::app::AppExtStates;
 use bevy::state::condition::in_state;
+use bevy::window::PrimaryWindow;
 use rand::Rng;
 use std::time::Duration;
 
@@ -10,6 +12,8 @@ const PIPE_SPEED: f32 = 150.0;
 const PIPE_GAP: f32 = 200.0;
 const PIPE_SPAWN_INTERVAL: f32 = 2.0;
 const GROUND_HEIGHT: f32 = -250.0;
+const SPEED_INCREASE_RATE: f32 = 0.05; // Speed multiplier increase per pipe passed
+const MAX_SPEED_MULTIPLIER: f32 = 2.5; // Maximum speed multiplier
 
 #[derive(Component)]
 struct Bird {
@@ -53,11 +57,27 @@ struct Score(u32);
 #[derive(Resource)]
 struct PipeSpawnTimer(Timer);
 
+#[derive(Resource)]
+struct GameDifficulty {
+    speed_multiplier: f32,
+    pipes_passed: u32,
+}
+
+impl Default for GameDifficulty {
+    fn default() -> Self {
+        Self {
+            speed_multiplier: 1.0,
+            pipes_passed: 0,
+        }
+    }
+}
+
 #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
 enum GameState {
     #[default]
     Menu,
     Playing,
+    Paused,
     GameOver,
 }
 
@@ -77,6 +97,7 @@ fn main() {
         )
         .init_state::<GameState>()
         .insert_resource(Score(0))
+        .insert_resource(GameDifficulty::default())
         .insert_resource(PipeSpawnTimer(Timer::from_seconds(
             PIPE_SPAWN_INTERVAL,
             TimerMode::Repeating,
@@ -93,8 +114,15 @@ fn main() {
                 check_collisions,
                 update_score,
                 execute_animations,
+                pause_input,
+                screenshot_input,
             )
                 .run_if(in_state(GameState::Playing)),
+        )
+        .add_systems(
+            Update,
+            (pause_input, screenshot_input, unpause_system)
+                .run_if(in_state(GameState::Paused)),
         )
         .add_systems(
             Update,
@@ -275,11 +303,12 @@ fn spawn_pipes(time: Res<Time>, mut timer: ResMut<PipeSpawnTimer>, mut commands:
 
 fn pipe_movement(
     time: Res<Time>,
+    difficulty: Res<GameDifficulty>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut Transform, &Velocity), With<Pipe>>,
 ) {
     for (entity, mut transform, velocity) in query.iter_mut() {
-        transform.translation.x += velocity.x * time.delta_seconds();
+        transform.translation.x += velocity.x * time.delta_seconds() * difficulty.speed_multiplier;
 
         // Despawn pipes that are off screen
         if transform.translation.x < -500.0 {
@@ -324,6 +353,7 @@ fn update_score(
     bird_query: Query<&Transform, With<Bird>>,
     pipe_query: Query<&Transform, With<Pipe>>,
     mut score: ResMut<Score>,
+    mut difficulty: ResMut<GameDifficulty>,
     mut text_query: Query<&mut Text>,
 ) {
     for bird_transform in bird_query.iter() {
@@ -333,6 +363,14 @@ fn update_score(
                 && bird_transform.translation.x < pipe_transform.translation.x + 5.0
             {
                 score.0 += 1;
+                
+                // Increase difficulty every 2 pipes (1 complete gap)
+                if score.0 % 2 == 0 {
+                    difficulty.pipes_passed += 1;
+                    difficulty.speed_multiplier = (1.0 + SPEED_INCREASE_RATE * difficulty.pipes_passed as f32)
+                        .min(MAX_SPEED_MULTIPLIER);
+                }
+                
                 for mut text in text_query.iter_mut() {
                     text.sections[0].value = format!("Score: {}", score.0 / 2);
                 }
@@ -348,6 +386,7 @@ fn game_over_system(
     entities_query: Query<Entity, Or<(With<Bird>, With<Pipe>, With<Text>, With<Sprite>)>>,
     text_count_query: Query<&Text>,
     mut score: ResMut<Score>,
+    mut difficulty: ResMut<GameDifficulty>,
 ) {
     // Spawn game over text on first frame
     if text_count_query.iter().count() == 1 {
@@ -373,8 +412,9 @@ fn game_over_system(
             commands.entity(entity).despawn();
         }
 
-        // Reset score
+        // Reset score and difficulty
         score.0 = 0;
+        *difficulty = GameDifficulty::default();
 
         // Go back to menu
         next_state.set(GameState::Menu);
@@ -396,3 +436,67 @@ fn game_over_system(
         }),));
     }
 }
+
+fn pause_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+) {
+    if keyboard.just_pressed(KeyCode::KeyP) {
+        // Spawn pause text
+        commands.spawn((TextBundle::from_section(
+            "PAUSED\nPress P to Resume",
+            TextStyle {
+                font_size: 40.0,
+                color: Color::WHITE,
+                ..default()
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(250.0),
+            left: Val::Px(280.0),
+            ..default()
+        }),));
+        
+        next_state.set(GameState::Paused);
+    }
+}
+
+fn unpause_system(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    text_query: Query<Entity, With<Text>>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyP) {
+        // Remove pause text (keep only score text)
+        let mut count = 0;
+        for entity in text_query.iter() {
+            if count > 0 {
+                commands.entity(entity).despawn();
+            }
+            count += 1;
+        }
+        
+        next_state.set(GameState::Playing);
+    }
+}
+
+fn screenshot_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    main_window: Query<Entity, With<PrimaryWindow>>,
+    mut screenshot_manager: ResMut<ScreenshotManager>,
+) {
+    if keyboard.just_pressed(KeyCode::KeyS) {
+        let path = format!("./screenshot-{}.png", chrono::Local::now().format("%Y%m%d-%H%M%S"));
+        
+        if let Ok(entity) = main_window.get_single() {
+            screenshot_manager
+                .save_screenshot_to_disk(entity, path)
+                .unwrap();
+            println!("Screenshot saved!");
+        }
+    }
+}
+
