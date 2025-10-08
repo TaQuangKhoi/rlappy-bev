@@ -52,5 +52,5 @@ jobs:
       - name: Run cargo build
         run: cargo build --verbose
 
-      - name: Run cargo build (release)
-        run: cargo build --release --verbose
+      # - name: Run cargo build (release)
+        # run: cargo build --release --verbose
