@@ -66,9 +66,9 @@ The release workflow will automatically:
 Pre-built packages are available on the [Releases](https://github.com/TaQuangKhoi/rlappy-bev/releases) page.
 
 Each release includes ZIP files for different platforms:
-- `rlappy-bev-x86_64-pc-windows-msvc.zip` - Windows 64-bit
-- `rlappy-bev-x86_64-unknown-linux-gnu.zip` - Linux 64-bit
-- `rlappy-bev-x86_64-apple-darwin.zip` - macOS 64-bit
+- `rlappy-bev-{version}-x86_64-pc-windows-msvc.zip` - Windows 64-bit (e.g., `rlappy-bev-v0.1.1-x86_64-pc-windows-msvc.zip`)
+- `rlappy-bev-{version}-x86_64-unknown-linux-gnu.zip` - Linux 64-bit (e.g., `rlappy-bev-v0.1.1-x86_64-unknown-linux-gnu.zip`)
+- `rlappy-bev-{version}-x86_64-apple-darwin.zip` - macOS 64-bit (e.g., `rlappy-bev-v0.1.1-x86_64-apple-darwin.zip`)
 
 To run the game:
 1. Download the ZIP file for your platform

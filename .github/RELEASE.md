@@ -24,9 +24,9 @@ Tài liệu này mô tả quy trình tự động hóa release cho dự án rlap
 Khi tag được tạo, hệ thống sẽ tự động:
 1. ✅ Tạo GitHub Release với tên version
 2. ✅ Build game với cargo cho 3 nền tảng:
-   - Windows (x86_64) → `rlappy-bev-x86_64-pc-windows-msvc.zip`
-   - Linux (x86_64) → `rlappy-bev-x86_64-unknown-linux-gnu.zip`
-   - macOS (x86_64) → `rlappy-bev-x86_64-apple-darwin.zip`
+   - Windows (x86_64) → `rlappy-bev-{version}-x86_64-pc-windows-msvc.zip` (e.g., `rlappy-bev-v0.1.1-x86_64-pc-windows-msvc.zip`)
+   - Linux (x86_64) → `rlappy-bev-{version}-x86_64-unknown-linux-gnu.zip` (e.g., `rlappy-bev-v0.1.1-x86_64-unknown-linux-gnu.zip`)
+   - macOS (x86_64) → `rlappy-bev-{version}-x86_64-apple-darwin.zip` (e.g., `rlappy-bev-v0.1.1-x86_64-apple-darwin.zip`)
 3. ✅ Đóng gói binary cùng với thư mục assets vào file ZIP
 4. ✅ Upload các file ZIP lên GitHub Release
 5. ✅ Release sẵn sàng để download và chạy!
