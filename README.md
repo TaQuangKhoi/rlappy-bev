@@ -18,7 +18,7 @@ A Flappy Bird clone (called "Rlappy Bev") implemented in Rust using the Bevy gam
 ## Controls
 - **Click START button** or **SPACE**: Start game (in menu)
 - **SPACE**: Jump (in-game)
-- **P**: Pause/Resume game
+- **P** or **Esc**: Pause/Resume game
 - **S**: Take a screenshot (saved as `screenshot-YYYYMMDD-HHMMSS.png`)
 - **Click RESTART button** or **R**: Restart game (after game over)
 

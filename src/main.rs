@@ -597,10 +597,10 @@ fn pause_input(
     mut next_state: ResMut<NextState<GameState>>,
     mut commands: Commands,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyP) {
+    if keyboard.just_pressed(KeyCode::KeyP) || keyboard.just_pressed(KeyCode::Escape) {
         // Spawn pause text
         commands.spawn((TextBundle::from_section(
-            "PAUSED\nPress P to Resume",
+            "PAUSED\nPress P or Esc to Resume",
             TextStyle {
                 font_size: 40.0,
                 color: Color::WHITE,
@@ -624,7 +624,7 @@ fn unpause_system(
     mut commands: Commands,
     text_query: Query<Entity, With<Text>>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyP) {
+    if keyboard.just_pressed(KeyCode::KeyP) || keyboard.just_pressed(KeyCode::Escape) {
         // Remove pause text (keep only score text)
         let mut count = 0;
         for entity in text_query.iter() {
